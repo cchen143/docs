@@ -1,0 +1,306 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+    div.padded {
+      padding-top: 0px;
+      padding-right: 100px;
+      padding-bottom: 0.25in;
+      padding-left: 100px;
+    }
+  </style>
+<title>CS 184: Computer Graphics and Imaging, Summer 2020</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Final: PathTracer</h1>
+    <h2 align="middle">Team Member: Chieh Chen</h2>
+
+    <br><br>
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q4D.png" align="middle" width="400px"/>
+          </td>
+          <td>
+            <img src="images/Q4I.png" align="middle" width="400px"/>
+          </td>
+          <td>
+            <img src="images/Q4G.png" align="middle" width="400px"/>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <br><br>
+
+
+	<div class="padded">
+	<h2 align="middle">Abstract</h2>
+	<p> In assignment 3-1, we were required to implement a CPU-based raytracer. However, rendering an image with a higher sampling rate might take a while.
+    In this project, my goal is to improve the rendering time.
+    I first compared the performance of random sampling and Hammersley sampling when sampling on each pixel.
+    In addition, I also compared the rendering time when utilizing surface area heuristic-based bounding volume hierarchy
+    and mean of the primitives’ centroids-based bounding volume hierarchy.
+    Lastly, I modified the bounding box intersection test to improve the rendering time.
+	</p>
+
+	<h2 align="middle">Technical approach</h2>
+		<li> <b>Hammersley Sampling </b> </li>
+    <p>Hammersley Sampling is based on the Hammersley sequence to determine a sample point.
+    The sample points are chosen pseudorandomly.
+    The Hammersley sequence is defined as below.</p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Hammersley.png" align="middle" width="400px"/>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <p>In the above fomula, b can be any prime number, and di is the ith digit from the right of the number k in binary representation.
+    For example, HammersleySequence(4) = 0 * (1/2) + 0 * (1/4) + 1 * (1/8) = 0.125, where 4 is 100 in binary representation.
+    After the esitmation of Hammersley sequence, the sample point is defined as (k/n, HammersleySequence(k)); n is the number of all sample points.
+    In this project, I chose 2 as the base of Hammersley sequence.
+    </p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/points.png" align="middle" width="400px"/>
+            <figcaption align="middle">256 Hammersley Samples</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <br>
+		<li> <b>Surface Area Heuristic Bounding Volume Hierarchy(SAH BVH) </b> </li>
+    <p>
+      The surface area heuristic estimates the computational cost of performing ray intersection tests.
+      The cost is equal to
+      A constant number + (suface area of partition A * the number of primitives in partition A +
+      suface area of partition B * the number of primitives in partition B ) /
+      the surface area of current bounding box.
+      In this project, I implemented two versions of Surface Area Heuristic Bounding Volume Hierarchies.
+      The first version finds the longest side of the current bounding box, divides it into twelve partitions,
+      and computed the surface area of every two adjcent partitions divided by one of eleven points to find the cost.
+      I looped through the eleven points to find the point with the lowest cost, and used it to divide the current bounding box into two parttition.
+      I repeated the above steps until there is no primitive in one of the two partitions, or the number of the primitives in a partition is less than max leaf size.
+      I then set the partition as leaf node. The second version has the same steps as first version, except that it finds the smallest cost of all sides to form BVH.
+    </p>
+    <br>
+		<li> <b>Modified Intersection Test</b></li>
+    <p>In this part, the goal is to replace the swap functions with some operations.
+      In order to eliminate the swap function, I saved the sign of the direction of a ray in the ray object so it was determined when the object was created.
+      Then I use the sign as index of an array to pick the min or max vertex of a bounding box. Hence, when the tmin and tmax are assigned, both values are in the correct order.
+      The swap function can be replaced.</p>
+      <div align="middle">
+        <table style="width=100%">
+          <tr>
+            <td>
+              <img src="images/sign.png" align="middle" width="400px"/>
+              <figcaption align="middle">Saved the Sign of the Ray Direction</figcaption>
+            </td>
+              <td>
+                <img src="images/vertex.png" align="middle" width="400px"/>
+                <figcaption align="middle">Stored the Min and Max Vertices in an Array</figcaption>
+              </td>
+
+                <td>
+                  <img src="images/assign.png" align="middle" width="400px"/>
+                  <figcaption align="middle">Assigned tmin and tmax</figcaption>
+                </td>
+          </tr>
+        </table>
+      </div>
+
+    <br>
+    <p>Lastly, I rewrote the intersection functions and replaced the recursive calls with a stack and a while loop.</p>
+
+<h2 align="middle">Results</h2>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/BO.png" align="middle" width="400px"/>
+        <figcaption align="middle">Bench.dae (67808 primitives)</figcaption>
+      </td>
+      <td>
+        <img src="images/BLO.png" align="middle" width="400px"/>
+        <figcaption align="middle">Blob.dae (196608 primitives)</figcaption>
+      </td>
+      <td>
+        <img src="images/DO.png" align="middle" width="400px"/>
+        <figcaption align="middle">Dragon.dae (105120 primitives)</figcaption>
+      </td>
+      <td>
+        <img src="images/H.png" align="middle" width="400px"/>
+        <figcaption align="middle">Banana.dae (2458 primitives)</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<h3 align="middle">Images Generated by Random Sampling and Hammersley Sampling</h3>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/OP.png" align="middle" width="400px"/>
+        <figcaption align="middle">Original Image</figcaption>
+      </td>
+      <td>
+        <img src="images/RP.png" align="middle" width="400px"/>
+        <figcaption align="middle">Random Sampling</figcaption>
+      </td>
+      <td>
+        <img src="images/HP.png" align="middle" width="400px"/>
+        <figcaption align="middle">Hammersley Sampling</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>In the images above, it is obvious that the image generated by random sampling has noise and aliasing;
+   whereas the image generated by Hammersley sampling looks more similar to original image.</p>
+
+<h3 align="middle">Performance of Optimized Intersection Test</h3>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/BF2ITT.png" align="middle" width="400px"/>
+        <figcaption align="middle">Non-Optimized</figcaption>
+      </td>
+      <td>
+        <img src="images/BF2T.png" align="middle" width="400px"/>
+        <figcaption align="middle">Optimized</figcaption>
+      </td>
+    </tr>
+      <tr>
+        <td>
+          <img src="images/BLF2ITT.png" align="middle" width="400px"/>
+          <figcaption align="middle">Non-Optimized</figcaption>
+        </td>
+        <td>
+          <img src="images/BLF2T.png" align="middle" width="400px"/>
+          <figcaption align="middle">Optimized</figcaption>
+        </td>
+    </tr>
+  </table>
+</div>
+
+<p>The results above indicate that the implementation of optimized intersection test improves the rendering time.
+The optimized version reduces the rendering time roughly by half in the results of rendering two different images.</p>
+
+<h3 align="middle">Performance of Recursive and Iterative Intersection Functions</h3>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/BF2RT.png" align="middle" width="400px"/>
+        <figcaption align="middle">Recusive</figcaption>
+      </td>
+      <td>
+        <img src="images/BF2T.png" align="middle" width="400px"/>
+        <figcaption align="middle">Iterative</figcaption>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <img src="images/BLF2RT.png" align="middle" width="400px"/>
+        <figcaption align="middle">Recursive</figcaption>
+      </td>
+      <td>
+        <img src="images/BLF2T.png" align="middle" width="400px"/>
+        <figcaption align="middle">Iterative</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>The iterative intersection routines perform better than the recursive routines.</p>
+
+<h3 align="middle">Performance of Recursive and Iterative Intersection Functions</h3>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/BLOT.png" align="middle" width="400px"/>
+        <figcaption align="middle">Original</figcaption>
+      </td>
+      <td>
+        <img src="images/BLF1T.png" align="middle" width="400px"/>
+        <figcaption align="middle">SAH BVH Version 1</figcaption>
+      </td>
+      <td>
+        <img src="images/BLF2T.png" align="middle" width="400px"/>
+        <figcaption align="middle">SAH BVH Version 2</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/DOT.png" align="middle" width="400px"/>
+        <figcaption align="middle">Original</figcaption>
+      </td>
+      <td>
+        <img src="images/DF1T.png" align="middle" width="400px"/>
+        <figcaption align="middle">SAH BVH Version 1</figcaption>
+      </td>
+      <td>
+        <img src="images/DF2T.png" align="middle" width="400px"/>
+        <figcaption align="middle">SAH BVH Version 2</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>The outcomes above indicate that the improvement of the optimized implementation.
+  The original implementation utilized the mean of the primitives’ centroids to create BVH.
+  It also uses the non-optimized intersection test and recursive intersection functions.
+  Oppositely, the optimized version adopted Surface Area Heuristic when building BVH.
+  It also uses the optimized intersection test and iterative intersection functions.
+  The difference between SAH BVH version 1 and SAH BVH version 2 is the way the methods divide a bounding box.
+  Version 1 simply finds the smallest cost of the longest side to create partitions,
+  and version 2 finds the smallest cost of all sides to form BVH.
+
+
+</p>
+
+<h2 align="middle">References</h2>
+<br>[1] http://web.cs.wpi.edu/~emmanuel/courses/cs563/S10/talks/wk3_p1_wadii_sampling_techniques.pdf
+<br>[2] http://www.pbr-book.org/3ed-2018/Sampling_and_Reconstruction/The_Halton_Sampler.html
+<br>[3] http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html
+<br>[4] https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
+
+<h2 align="middle">Contributions</h2>
+<p>
+Chieh Chen:
+  <li> Implemented the grid sampler by Hammersley sampling</li>
+  <li> Implemented surface area heuristic-based bounding volume hierarchies</li>
+	<li> Optimized bounding box intersection test</li>
+  <li> Rewrote iterative intersection routines for the BVH</li>
+
+</div>
+
+
+<h2 align="middle">Video Demo</h2>
+<div align="center">
+<iframe width="800" height="600" src="https://www.youtube.com/embed/dGrNH0FOWJc" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+    </body>
+    </html>
